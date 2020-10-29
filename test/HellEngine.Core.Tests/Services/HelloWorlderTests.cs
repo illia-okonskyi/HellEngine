@@ -1,6 +1,7 @@
 ﻿using HellEngine.Core.Constants;
 using HellEngine.Core.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -12,9 +13,11 @@ namespace HellEngine.Core.Tests.Services
         class TestCaseContext
         {
             #region Data
+            public string HelloString { get; }
             #endregion
 
             #region Services
+            public IOptions<HelloWorlderOptions> Options { get; }
             public ILogger<HelloWorlder> Logger { get; }
             #endregion
 
@@ -23,23 +26,48 @@ namespace HellEngine.Core.Tests.Services
 
             public TestCaseContext()
             {
+                HelloString = "helloString";
+
+                Options = Mock.Of<IOptions<HelloWorlderOptions>>();
                 Logger = Mock.Of<ILogger<HelloWorlder>>();
+
+                Mock.Get(Options).Setup(
+                    m => m.Value)
+                    .Returns(new HelloWorlderOptions { HelloString = HelloString });
             }
         }
         #endregion
 
         [Fact]
-        public void GetHelloString()
+        public void GetHelloString_NoConfig_Default()
         {
             // Arrange
             var context = new TestCaseContext();
-            var sut = new HelloWorlder(context.Logger);
+            Mock.Get(context.Options).Setup(
+                m => m.Value)
+                .Returns<HelloWorlderOptions>(null);
+
+            var sut = new HelloWorlder(context.Options, context.Logger);
 
             // Act
             var result = sut.GetHelloString();
 
             // Assert
             Assert.Equal(HelloWorld.HelloString, result);
+        }
+
+        [Fact]
+        public void GetHelloString_ReturnsConfigured()
+        {
+            // Arrange
+            var context = new TestCaseContext();
+            var sut = new HelloWorlder(context.Options, context.Logger);
+
+            // Act
+            var result = sut.GetHelloString();
+
+            // Assert
+            Assert.Equal(context.HelloString, result);
         }
     }
 }
