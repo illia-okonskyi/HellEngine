@@ -2,6 +2,7 @@
 using HellEngine.Utils.Configuration.ServiceRegistrator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System;
 
 namespace HellEngine.Core.Services
 {
@@ -18,7 +19,7 @@ namespace HellEngine.Core.Services
     }
 
     [ApplicationService(Service = typeof(IHelloWorlder))]
-    public class HelloWorlder : IHelloWorlder
+    public class HelloWorlder : IHelloWorlder, IDisposable
     {
         private readonly string helloString;
         private readonly ILogger<HelloWorlder> logger;
@@ -29,6 +30,11 @@ namespace HellEngine.Core.Services
         {
             this.helloString = options.Value?.HelloString;
             this.logger = logger;
+        }
+
+        public void Dispose()
+        {
+            logger.LogInformation("HelloWorlder.Dispose()");
         }
 
         public string GetHelloString()
