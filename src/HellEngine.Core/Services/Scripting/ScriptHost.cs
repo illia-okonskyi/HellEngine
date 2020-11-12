@@ -1,9 +1,12 @@
 ﻿using HellEngine.Core.Exceptions;
+using HellEngine.Core.Services.Encoding;
 using HellEngine.Utils.Configuration.ServiceRegistrator;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,27 +48,37 @@ namespace HellEngine.Core.Services.Scripting
             where TOutput : class, new();
     }
 
+    [ApplicationOptions("ScriptHost")]
     public class ScriptHostOptions
     {
-        public static string Path = "ScriptHost";
         public static ScriptHostOptions Default => new ScriptHostOptions();
+
+        public bool UnsafeMode { get; set; } = Constants.Defaults.ScriptHostUnsafeMode;
     }
 
-    [ApplicationService(Service = typeof(IScriptHost))]
+    [ApplicationService(
+        Service = typeof(IScriptHost),
+        Lifetime = ApplicationServiceLifetime.Singletone)]
     public class ScriptHost : IScriptHost
     {
         private readonly ScriptHostOptions options;
         private readonly ILogger<ScriptHost> logger;
         private readonly ILogger<HellScriptContext> scriptLogger;
+        private readonly IStringEncoder stringEncoder;
+        private readonly IServiceProvider serviceProvider;
 
         public ScriptHost(
             IOptions<ScriptHostOptions> options,
             ILogger<ScriptHost> logger,
-            ILogger<HellScriptContext> scriptLogger)
+            ILogger<HellScriptContext> scriptLogger,
+            IStringEncoder stringEncoder,
+            IServiceProvider serviceProvider)
         {
             this.options = options.Value ?? ScriptHostOptions.Default;
             this.logger = logger;
             this.scriptLogger = scriptLogger;
+            this.stringEncoder = stringEncoder;
+            this.serviceProvider = serviceProvider;
         }
 
         public HellScript<HellScriptContext> CreateScript(string name, string code)
@@ -145,9 +158,11 @@ namespace HellEngine.Core.Services.Scripting
                 MakeScriptOptions(),
                 typeof(THellScriptContext));
         }
-        public static ScriptOptions MakeScriptOptions()
+        private ScriptOptions MakeScriptOptions()
         {
             return ScriptOptions.Default
+                .WithFileEncoding(stringEncoder.GetEncoding())
+                .AddImports("Microsoft.Extensions.Logging")
                 .AddReferences(
                     typeof(AssemblyEntryPoint).Assembly,
                     typeof(ILogger).Assembly);
@@ -159,7 +174,11 @@ namespace HellEngine.Core.Services.Scripting
         {
             logger.LogDebug($"Running script {script.Name}");
 
-            var context = new HellScriptContext(script.Name, scriptLogger);
+            using var sdkServiceProvider = MakeSdkServiceProvider();
+            var context = new HellScriptContext(
+                script.Name,
+                scriptLogger,
+                sdkServiceProvider);
             await RunScript(script, context, cancellationToken);
         }
 
@@ -171,7 +190,12 @@ namespace HellEngine.Core.Services.Scripting
         {
             logger.LogDebug($"Running script {script.Name}");
 
-            var context = new HellScriptContext<TInput>(script.Name, scriptLogger, input);
+            using var sdkServiceProvider = MakeSdkServiceProvider();
+            var context = new HellScriptContext<TInput>(
+                script.Name,
+                scriptLogger,
+                sdkServiceProvider,
+                input);
             await RunScript(script, context, cancellationToken);
         }
 
@@ -184,9 +208,19 @@ namespace HellEngine.Core.Services.Scripting
         {
             logger.LogDebug($"Running script {script.Name}");
 
-            var context = new HellScriptContext<TInput, TOutput>(script.Name, scriptLogger, input);
+            using var sdkServiceProvider = MakeSdkServiceProvider();
+            var context = new HellScriptContext<TInput, TOutput>(
+                script.Name,
+                scriptLogger,
+                sdkServiceProvider,
+                input);
             await RunScript(script, context, cancellationToken);
             return context.Output;
+        }
+
+        public ISdkServiceProvider MakeSdkServiceProvider()
+        {
+            return new SdkServiceProvider(serviceProvider.CreateScope(), options.UnsafeMode);
         }
 
         private async Task RunScript<THellScriptContext>(
@@ -197,13 +231,13 @@ namespace HellEngine.Core.Services.Scripting
         {
             if (script.ContextType != typeof(THellScriptContext))
             {
-                throw new HellScriptException("Unexpected script context type");
+                throw new UnexpectedScriptTypeException();
             }
 
             var state = await script.Script.RunAsync(context, e => true, cancellationToken);
             if (state.Exception != null)
             {
-                throw new HellScriptException("Exception executing HellScript", state.Exception);
+                throw new RuntimeScriptException(state.Exception);
             }
         }
     }

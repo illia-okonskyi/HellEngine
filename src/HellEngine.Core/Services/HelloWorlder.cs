@@ -3,18 +3,19 @@ using HellEngine.Utils.Configuration.ServiceRegistrator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.IO;
 
 namespace HellEngine.Core.Services
 {
+    [SdkService]
     public interface IHelloWorlder
     {
         string GetHelloString();
     }
 
+    [ApplicationOptions("HelloWorlder")]
     public class HelloWorlderOptions
     {
-        public static string Path = "HelloWorlder";
-        
         public string HelloString { get; set; }
     }
 

@@ -9,10 +9,12 @@ namespace HellEngine.Core.Services.Scripting
         public string ScriptName { get; }
         public ILogger<HellScriptContext> Logger { get; }
         public int ManagedThreadId { get; }
+        public ISdkServiceProvider ServiceProvider { get; }
 
         public HellScriptContext(
             string scriptName,
-            ILogger<HellScriptContext> logger)
+            ILogger<HellScriptContext> logger,
+            ISdkServiceProvider serviceProvider)
         {
             if (string.IsNullOrEmpty(scriptName))
             {
@@ -21,6 +23,7 @@ namespace HellEngine.Core.Services.Scripting
             ScriptName = scriptName;
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
             ManagedThreadId = Thread.CurrentThread.ManagedThreadId;
+            ServiceProvider = serviceProvider;
         }
     }
 
@@ -32,8 +35,9 @@ namespace HellEngine.Core.Services.Scripting
         public HellScriptContext(
             string scriptName,
             ILogger<HellScriptContext> logger,
+            ISdkServiceProvider serviceProvider,
             TInput input)
-            : base(scriptName, logger)
+            : base(scriptName, logger, serviceProvider)
         {
             Input = input ?? throw new ArgumentNullException(nameof(input));
         }
@@ -48,8 +52,9 @@ namespace HellEngine.Core.Services.Scripting
         public HellScriptContext(
             string scriptName,
             ILogger<HellScriptContext> logger,
+            ISdkServiceProvider serviceProvider,
             TInput input)
-            : base(scriptName, logger, input)
+            : base(scriptName, logger, serviceProvider, input)
         { }
     }
 

@@ -14,13 +14,5 @@ namespace HellEngine.Core.Sdk.StaticServices
         {
             return a + b;
         }
-
-        public static string GetHelloString()
-        {
-            using var scope = AssemblyEntryPoint.SdkServiceProvider.CreateScope();
-            var helloWorlder = scope.ServiceProvider.GetRequiredService<IHelloWorlder>();
-
-            return helloWorlder.GetHelloString();
-        }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using HellEngine.Core.Services;
+using HellEngine.Core.Services.Encoding;
 using HellEngine.Core.Services.Scripting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -17,13 +19,16 @@ namespace HellEngine.Core.Tests.Services.Scripting
         class TestCaseContext
         {
             #region Data
-            public string HelloString { get; }
             #endregion
 
             #region Services
             public IOptions<ScriptHostOptions> Options { get; }
             public ILogger<ScriptHost> Logger { get; }
             public ILogger<HellScriptContext> ScriptLogger { get; }
+            public IStringEncoder StringEncoder { get; }
+            public IServiceProvider ServiceProvider { get; }
+            public IServiceScopeFactory ServiceScopeFactory { get; }
+            public IServiceScope ServiceScope { get; }
             #endregion
 
             #region Utils
@@ -34,10 +39,26 @@ namespace HellEngine.Core.Tests.Services.Scripting
                 Options = Mock.Of<IOptions<ScriptHostOptions>>();
                 Logger = Mock.Of<ILogger<ScriptHost>>();
                 ScriptLogger = Mock.Of<ILogger<HellScriptContext>>();
+                this.StringEncoder = Mock.Of<IStringEncoder>();
+                ServiceProvider = Mock.Of<IServiceProvider>();
+                ServiceScopeFactory = Mock.Of<IServiceScopeFactory>();
+                ServiceScope = Mock.Of<IServiceScope>();
 
                 Mock.Get(Options).Setup(
                     m => m.Value)
                     .Returns(new ScriptHostOptions { });
+
+                Mock.Get(this.StringEncoder).Setup(
+                    m => m.GetEncoding())
+                    .Returns(System.Text.Encoding.UTF8);
+
+                Mock.Get(ServiceProvider).Setup(
+                    m => m.GetService(typeof(IServiceScopeFactory)))
+                    .Returns(ServiceScopeFactory);
+
+                Mock.Get(ServiceScopeFactory).Setup(
+                    m => m.CreateScope())
+                    .Returns(ServiceScope);
             }
         }
         #endregion
@@ -48,13 +69,17 @@ namespace HellEngine.Core.Tests.Services.Scripting
             // Arrange
             var context = new TestCaseContext();
 
-            var sut = new ScriptHost(context.Options, context.Logger, context.ScriptLogger);
+            var sut = new ScriptHost(
+                context.Options,
+                context.Logger,
+                context.ScriptLogger,
+                context.StringEncoder,
+                context.ServiceProvider);
 
             var scriptName = "testScript";
             var a = 3;
             var b = 7;
             var code = $@"
-                using Microsoft.Extensions.Logging;
                 var a = {a};
                 var b = {b};
                 var c = a + b;
