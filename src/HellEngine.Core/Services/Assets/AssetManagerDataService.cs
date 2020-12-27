@@ -35,7 +35,7 @@ namespace HellEngine.Core.Services.Assets
                 rootPath
                     .AddPath(Constants.Defaults.AssetsDescriptorsDir)
                     .NormalizeDirectorySeparators(),
-                "*.json",
+                "*.desc",
                 SearchOption.AllDirectories);
 
             foreach (var path in paths)
