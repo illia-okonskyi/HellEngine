@@ -8,5 +8,6 @@ namespace HellEngine.Core.Services.Assets
         public static AssetsOptions Default => new AssetsOptions();
 
         public string AssetsDir { get; set; } = Constants.Defaults.AssetsDir;
+        public string VarValueSpanClass { get; set; } = Constants.Defaults.VarValueSpanClass;
     }
 }

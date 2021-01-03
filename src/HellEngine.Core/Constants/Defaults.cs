@@ -11,5 +11,7 @@
         public static string AssetsDir = "assets";
         public static string AssetsDataDir = "data";
         public static string AssetsDescriptorsDir = "descriptors";
+
+        public static string VarValueSpanClass = "var-value";
     }
 }

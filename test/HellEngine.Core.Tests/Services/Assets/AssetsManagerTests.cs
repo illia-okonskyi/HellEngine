@@ -34,6 +34,7 @@ namespace HellEngine.Core.Tests.Services.Assets
             public IAssetDescriptorsCache AssetDescriptorsCache { get; }
             public IStringEncoder StringEncoder { get; }
             public IBase64Encoder Base64Encoder { get; }
+            public ITextAssetDataProcessor TextAssetDataProcessor { get; }
             public IAssetManagerDataService DataService { get; }
             #endregion
 
@@ -59,6 +60,7 @@ namespace HellEngine.Core.Tests.Services.Assets
                 AssetDescriptorsCache = Mock.Of<IAssetDescriptorsCache>();
                 StringEncoder = Mock.Of<IStringEncoder>();
                 Base64Encoder = Mock.Of<IBase64Encoder>();
+                TextAssetDataProcessor = Mock.Of<ITextAssetDataProcessor>();
                 DataService = Mock.Of<IAssetManagerDataService>();
 
                 Mock.Get(OptionsService).Setup(
@@ -75,6 +77,10 @@ namespace HellEngine.Core.Tests.Services.Assets
                         It.IsAny<Asset>(),
                         It.IsAny<CancellationToken>()))
                     .ReturnsAsync(AssetBytes);
+
+                Mock.Get(TextAssetDataProcessor).Setup(
+                    m => m.ProcessData(AssetBytes))
+                    .Returns(AssetBytes);
 
                 Mock.Get(StringEncoder).Setup(
                     m => m.EncodeToString(AssetBytes))
@@ -98,6 +104,7 @@ namespace HellEngine.Core.Tests.Services.Assets
                 context.AssetDescriptorsCache,
                 context.StringEncoder,
                 context.Base64Encoder,
+                context.TextAssetDataProcessor,
                 context.DataService);
 
             // Act + Assert
@@ -127,6 +134,7 @@ namespace HellEngine.Core.Tests.Services.Assets
                 context.AssetDescriptorsCache,
                 context.StringEncoder,
                 context.Base64Encoder,
+                context.TextAssetDataProcessor,
                 context.DataService);
 
             var key = "d";
@@ -167,6 +175,7 @@ namespace HellEngine.Core.Tests.Services.Assets
                 context.AssetDescriptorsCache,
                 context.StringEncoder,
                 context.Base64Encoder,
+                context.TextAssetDataProcessor,
                 context.DataService);
 
             var key = "d";
@@ -223,6 +232,13 @@ namespace HellEngine.Core.Tests.Services.Assets
             Assert.Equal(dataEncoding, asset2.DataEncoding);
             Assert.Equal(data, asset1.Data);
             Assert.Equal(data, asset2.Data);
+
+            if (assetType == AssetType.Text)
+            {
+                Mock.Get(context.TextAssetDataProcessor).Verify(
+                    m => m.ProcessData(context.AssetBytes),
+                    Times.Exactly(2));
+            }
         }
     }
 }

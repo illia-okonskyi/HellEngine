@@ -59,6 +59,7 @@ namespace HellEngine.Core.Services.Assets
         private readonly IAssetDescriptorsCache assetDescriptorsCache;
         private readonly IStringEncoder stringEncoder;
         private readonly IBase64Encoder base64Encoder;
+        private readonly ITextAssetDataProcessor textAssetDataProcessor;
         private readonly IAssetManagerDataService dataService;
 
         public AssetsManager(
@@ -67,6 +68,7 @@ namespace HellEngine.Core.Services.Assets
             IAssetDescriptorsCache assetDescriptorsCache,
             IStringEncoder stringEncoder,
             IBase64Encoder base64Encoder,
+            ITextAssetDataProcessor textAssetDataProcessor,
             IAssetManagerDataService dataService)
         {
             this.options = options.Value?? AssetsOptions.Default;
@@ -74,6 +76,7 @@ namespace HellEngine.Core.Services.Assets
             this.assetDescriptorsCache = assetDescriptorsCache;
             this.stringEncoder = stringEncoder;
             this.base64Encoder = base64Encoder;
+            this.textAssetDataProcessor = textAssetDataProcessor;
             this.dataService = dataService;
         }
 
@@ -219,6 +222,10 @@ namespace HellEngine.Core.Services.Assets
                 options.AssetsDir,
                 asset,
                 cancellationToken);
+            if (asset.Descriptor.AssetType == AssetType.Text)
+            {
+                assetBytes = textAssetDataProcessor.ProcessData(assetBytes);
+            }
 
             string data = dataEncoding switch
             {
