@@ -1,5 +1,6 @@
 ﻿using HellEngine.Core.Exceptions;
 using HellEngine.Core.Services.Encoding;
+using HellEngine.Core.Services.Sessions;
 using HellEngine.Utils.Configuration.ServiceRegistrator;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -34,14 +35,17 @@ namespace HellEngine.Core.Services.Scripting
 
         Task RunScript(
             HellScript<HellScriptContext> script,
+            Guid sessionId,
             CancellationToken cancellationToken = default);
         Task RunScript<TInput>(
             HellScript<HellScriptContext<TInput>> script,
+            Guid sessionId,
             TInput input,
             CancellationToken cancellationToken = default)
             where TInput : class;
         Task<TOutput> RunScript<TInput, TOutput>(
             HellScript<HellScriptContext<TInput, TOutput>> script,
+            Guid sessionId,
             TInput input,
             CancellationToken cancellationToken = default)
             where TInput : class
@@ -52,8 +56,6 @@ namespace HellEngine.Core.Services.Scripting
     public class ScriptHostOptions
     {
         public static ScriptHostOptions Default => new ScriptHostOptions();
-
-        public bool UnsafeMode { get; set; } = Constants.Defaults.ScriptHostUnsafeMode;
     }
 
     [ApplicationService(
@@ -65,6 +67,7 @@ namespace HellEngine.Core.Services.Scripting
         private readonly ILogger<ScriptHost> logger;
         private readonly ILogger<HellScriptContext> scriptLogger;
         private readonly IStringEncoder stringEncoder;
+        private readonly ISessionManager sessionManager;
         private readonly IServiceProvider serviceProvider;
 
         public ScriptHost(
@@ -72,12 +75,14 @@ namespace HellEngine.Core.Services.Scripting
             ILogger<ScriptHost> logger,
             ILogger<HellScriptContext> scriptLogger,
             IStringEncoder stringEncoder,
+            ISessionManager sessionManager,
             IServiceProvider serviceProvider)
         {
             this.options = options.Value ?? ScriptHostOptions.Default;
             this.logger = logger;
             this.scriptLogger = scriptLogger;
             this.stringEncoder = stringEncoder;
+            this.sessionManager = sessionManager;
             this.serviceProvider = serviceProvider;
         }
 
@@ -158,6 +163,7 @@ namespace HellEngine.Core.Services.Scripting
                 MakeScriptOptions(),
                 typeof(THellScriptContext));
         }
+
         private ScriptOptions MakeScriptOptions()
         {
             return ScriptOptions.Default
@@ -170,37 +176,42 @@ namespace HellEngine.Core.Services.Scripting
 
         public async Task RunScript(
             HellScript<HellScriptContext> script,
+            Guid sessionId,
             CancellationToken cancellationToken = default)
         {
             logger.LogDebug($"Running script {script.Name}");
 
-            using var sdkServiceProvider = MakeSdkServiceProvider();
+            using var sdkUtilServiceProvider = MakeSdkUtilServiceProvider();
             var context = new HellScriptContext(
                 script.Name,
                 scriptLogger,
-                sdkServiceProvider);
+                sessionManager.GetSession(sessionId),
+                sdkUtilServiceProvider);
             await RunScript(script, context, cancellationToken);
         }
 
         public async Task RunScript<TInput>(
             HellScript<HellScriptContext<TInput>> script,
+            Guid sessionId,
             TInput input,
             CancellationToken cancellationToken = default)
             where TInput : class
         {
             logger.LogDebug($"Running script {script.Name}");
 
-            using var sdkServiceProvider = MakeSdkServiceProvider();
+            using var sdkUtilServiceProvider = MakeSdkUtilServiceProvider();
             var context = new HellScriptContext<TInput>(
                 script.Name,
                 scriptLogger,
-                sdkServiceProvider,
+                sessionManager.GetSession(sessionId),
+                sdkUtilServiceProvider,
                 input);
             await RunScript(script, context, cancellationToken);
         }
 
         public async Task<TOutput> RunScript<TInput, TOutput>(
             HellScript<HellScriptContext<TInput, TOutput>> script,
+            Guid sessionId,
             TInput input,
             CancellationToken cancellationToken = default)
             where TInput : class
@@ -208,19 +219,20 @@ namespace HellEngine.Core.Services.Scripting
         {
             logger.LogDebug($"Running script {script.Name}");
 
-            using var sdkServiceProvider = MakeSdkServiceProvider();
+            using var sdkUtilServiceProvider = MakeSdkUtilServiceProvider();
             var context = new HellScriptContext<TInput, TOutput>(
                 script.Name,
                 scriptLogger,
-                sdkServiceProvider,
+                sessionManager.GetSession(sessionId),
+                sdkUtilServiceProvider,
                 input);
             await RunScript(script, context, cancellationToken);
             return context.Output;
         }
 
-        public ISdkServiceProvider MakeSdkServiceProvider()
+        public ISdkUtilServiceProvider MakeSdkUtilServiceProvider()
         {
-            return new SdkServiceProvider(serviceProvider.CreateScope(), options.UnsafeMode);
+            return new SdkUtilServiceProvider(serviceProvider.CreateScope());
         }
 
         private async Task RunScript<THellScriptContext>(

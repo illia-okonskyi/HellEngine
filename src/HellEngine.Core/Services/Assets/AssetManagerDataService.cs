@@ -2,8 +2,6 @@
 using HellEngine.Core.Models.Assets;
 using HellEngine.Utils.Configuration.ServiceRegistrator;
 using HellEngine.Utils.Extensions;
-using Newtonsoft.Json;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,10 +10,6 @@ namespace HellEngine.Core.Services.Assets
 {
     public interface IAssetManagerDataService
     {
-        Task<Dictionary<string, AssetDescriptor>> LoadDescriptorsAsync(
-            string rootPath,
-            CancellationToken cancellationToken = default);
-
         Task<byte[]> ReadAssetBytesAsync(
             string rootPath,
             Asset asset,
@@ -25,29 +19,6 @@ namespace HellEngine.Core.Services.Assets
     [ApplicationService(Service = typeof(IAssetManagerDataService))]
     public class AssetManagerDataService : IAssetManagerDataService
     {
-        public async Task<Dictionary<string, AssetDescriptor>> LoadDescriptorsAsync(
-            string rootPath,
-            CancellationToken cancellationToken = default)
-        {
-            var result = new Dictionary<string, AssetDescriptor>();
-
-            var paths = Directory.GetFiles(
-                rootPath
-                    .AddPath(Constants.Defaults.AssetsDescriptorsDir)
-                    .NormalizeDirectorySeparators(),
-                "*.desc",
-                SearchOption.AllDirectories);
-
-            foreach (var path in paths)
-            {
-                var data = await File.ReadAllTextAsync(path, cancellationToken);
-                var descriptor = JsonConvert.DeserializeObject<AssetDescriptor>(data);
-                result.Add(descriptor.Key, descriptor);
-            }
-
-            return result;
-        }
-
         public async Task<byte[]> ReadAssetBytesAsync(
             string rootPath,
             Asset asset,

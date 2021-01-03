@@ -19,11 +19,11 @@ namespace HellEngine.Core.Services
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             using var scope = serviceProvider.CreateScope();
-            var scopedServiceProvider = scope.ServiceProvider;
+            var services = scope.ServiceProvider;
 
-            var assetsManager = scopedServiceProvider.GetRequiredService<IAssetsManager>();
+            var assetsDescriptorCache = services.GetRequiredService<IAssetDescriptorsCache>();
 
-            await assetsManager.Init(cancellationToken);
+            await assetsDescriptorCache.Init(cancellationToken);
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

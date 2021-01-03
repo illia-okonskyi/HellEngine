@@ -5,7 +5,7 @@ using System;
 
 namespace HellEngine.Core.Services.Encoding
 {
-    [SdkService]
+    [SdkUtilService]
     public interface IBase64Encoder
     {
         string Encode(byte[] data);

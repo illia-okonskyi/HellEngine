@@ -6,6 +6,6 @@ namespace HellEngine.Utils.Configuration.ServiceRegistrator
         AttributeTargets.Interface | AttributeTargets.Class,
         AllowMultiple = false,
         Inherited = false)]
-    public class SdkServiceAttribute : Attribute
+    public class SdkUtilServiceAttribute : Attribute
     {}
 }

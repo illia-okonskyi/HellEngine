@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using HellEngine.Core.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 
@@ -9,12 +10,14 @@ namespace HellEngine.Core.Services.Scripting
         public string ScriptName { get; }
         public ILogger<HellScriptContext> Logger { get; }
         public int ManagedThreadId { get; }
-        public ISdkServiceProvider ServiceProvider { get; }
+        public ISdkUtilServiceProvider UtilServiceProvider { get; }
+        public Session Session { get; }
 
         public HellScriptContext(
             string scriptName,
             ILogger<HellScriptContext> logger,
-            ISdkServiceProvider serviceProvider)
+            Session session,
+            ISdkUtilServiceProvider utilServiceProvider)
         {
             if (string.IsNullOrEmpty(scriptName))
             {
@@ -22,8 +25,9 @@ namespace HellEngine.Core.Services.Scripting
             }
             ScriptName = scriptName;
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            Session = session;
             ManagedThreadId = Thread.CurrentThread.ManagedThreadId;
-            ServiceProvider = serviceProvider;
+            UtilServiceProvider = utilServiceProvider;
         }
     }
 
@@ -35,9 +39,10 @@ namespace HellEngine.Core.Services.Scripting
         public HellScriptContext(
             string scriptName,
             ILogger<HellScriptContext> logger,
-            ISdkServiceProvider serviceProvider,
+            Session session,
+            ISdkUtilServiceProvider utilServiceProvider,
             TInput input)
-            : base(scriptName, logger, serviceProvider)
+            : base(scriptName, logger, session, utilServiceProvider)
         {
             Input = input ?? throw new ArgumentNullException(nameof(input));
         }
@@ -52,9 +57,10 @@ namespace HellEngine.Core.Services.Scripting
         public HellScriptContext(
             string scriptName,
             ILogger<HellScriptContext> logger,
-            ISdkServiceProvider serviceProvider,
+            Session session,
+            ISdkUtilServiceProvider utilServiceProvider,
             TInput input)
-            : base(scriptName, logger, serviceProvider, input)
+            : base(scriptName, logger, session, utilServiceProvider, input)
         { }
     }
 

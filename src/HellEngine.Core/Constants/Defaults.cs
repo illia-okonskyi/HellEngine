@@ -11,7 +11,5 @@
         public static string AssetsDir = "assets";
         public static string AssetsDataDir = "data";
         public static string AssetsDescriptorsDir = "descriptors";
-
-        public static bool ScriptHostUnsafeMode = false;
     }
 }

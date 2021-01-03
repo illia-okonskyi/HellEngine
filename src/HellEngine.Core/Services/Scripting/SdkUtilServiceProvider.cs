@@ -5,23 +5,20 @@ using System;
 
 namespace HellEngine.Core.Services.Scripting
 {
-    public interface ISdkServiceProvider : IDisposable
+    public interface ISdkUtilServiceProvider : IDisposable
     {
         object GetService(Type service);
         TService GetService<TService>();
     }
 
-    public class SdkServiceProvider : ISdkServiceProvider
+    public class SdkUtilServiceProvider : ISdkUtilServiceProvider
     {
         private readonly IServiceScope serviceScope;
-        private readonly bool unsafeMode;
 
-        public SdkServiceProvider(
-            IServiceScope serviceScope,
-            bool unsafeMode)
+        public SdkUtilServiceProvider(
+            IServiceScope serviceScope)
         {
             this.serviceScope = serviceScope;
-            this.unsafeMode = unsafeMode;
         }
         
         public void Dispose()
@@ -43,12 +40,7 @@ namespace HellEngine.Core.Services.Scripting
 
         private void ValidateAccess(Type service)
         {
-            if (unsafeMode)
-            {
-                return;
-            }
-
-            if (!service.IsDefined(typeof(SdkServiceAttribute), false))
+            if (!service.IsDefined(typeof(SdkUtilServiceAttribute), false))
             {
                 throw new ServiceAccessDeniedException(service);
             }

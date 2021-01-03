@@ -1,13 +1,12 @@
-﻿using HellEngine.Core.Services;
+﻿using HellEngine.Core.Models;
 using HellEngine.Core.Services.Encoding;
 using HellEngine.Core.Services.Scripting;
+using HellEngine.Core.Services.Sessions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -19,6 +18,7 @@ namespace HellEngine.Core.Tests.Services.Scripting
         class TestCaseContext
         {
             #region Data
+            public Session Session { get; }
             #endregion
 
             #region Services
@@ -26,6 +26,7 @@ namespace HellEngine.Core.Tests.Services.Scripting
             public ILogger<ScriptHost> Logger { get; }
             public ILogger<HellScriptContext> ScriptLogger { get; }
             public IStringEncoder StringEncoder { get; }
+            public ISessionManager SessionManager { get; }
             public IServiceProvider ServiceProvider { get; }
             public IServiceScopeFactory ServiceScopeFactory { get; }
             public IServiceScope ServiceScope { get; }
@@ -36,10 +37,16 @@ namespace HellEngine.Core.Tests.Services.Scripting
 
             public TestCaseContext()
             {
+                Session = new Session
+                {
+                    Id = Guid.NewGuid()
+                };
+
                 Options = Mock.Of<IOptions<ScriptHostOptions>>();
                 Logger = Mock.Of<ILogger<ScriptHost>>();
                 ScriptLogger = Mock.Of<ILogger<HellScriptContext>>();
                 this.StringEncoder = Mock.Of<IStringEncoder>();
+                SessionManager = Mock.Of<ISessionManager>();
                 ServiceProvider = Mock.Of<IServiceProvider>();
                 ServiceScopeFactory = Mock.Of<IServiceScopeFactory>();
                 ServiceScope = Mock.Of<IServiceScope>();
@@ -51,6 +58,10 @@ namespace HellEngine.Core.Tests.Services.Scripting
                 Mock.Get(this.StringEncoder).Setup(
                     m => m.GetEncoding())
                     .Returns(System.Text.Encoding.UTF8);
+
+                Mock.Get(SessionManager).Setup(
+                    m => m.GetSession(Session.Id))
+                    .Returns(Session);
 
                 Mock.Get(ServiceProvider).Setup(
                     m => m.GetService(typeof(IServiceScopeFactory)))
@@ -74,6 +85,7 @@ namespace HellEngine.Core.Tests.Services.Scripting
                 context.Logger,
                 context.ScriptLogger,
                 context.StringEncoder,
+                context.SessionManager,
                 context.ServiceProvider);
 
             var scriptName = "testScript";
@@ -83,7 +95,7 @@ namespace HellEngine.Core.Tests.Services.Scripting
                 var a = {a};
                 var b = {b};
                 var c = a + b;
-                Logger.LogDebug($""Running script {{ScriptName}}; Sum = {{c}}"");";
+                Logger.LogDebug($""Running script {{ScriptName}}; Sum = {{c}}; Session = {{Session.Id}}"");";
 
             // Act + Assert
             var script = sut.CreateScript(scriptName, code);
@@ -93,10 +105,10 @@ namespace HellEngine.Core.Tests.Services.Scripting
             Assert.NotNull(script.Script);
             Assert.Equal(typeof(HellScriptContext), script.ContextType);
 
-            await sut.RunScript(script);
+            await sut.RunScript(script, context.Session.Id);
 
             Func<object, Type, bool> expectedState =
-                (v, t) => v.ToString().CompareTo($"Running script {scriptName}; Sum = {a + b}") == 0;
+                (v, t) => v.ToString().CompareTo($"Running script {scriptName}; Sum = {a + b}; Session = {context.Session.Id}") == 0;
             Mock.Get(context.ScriptLogger).Verify(
                 m => m.Log(
                     LogLevel.Debug,

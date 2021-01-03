@@ -5,7 +5,7 @@ using System;
 
 namespace HellEngine.Core.Services.Encoding
 {
-    [SdkService]
+    [SdkUtilService]
     public interface IStringEncoder
     {
         System.Text.Encoding GetEncoding();

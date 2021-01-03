@@ -1,14 +1,13 @@
-﻿using HellEngine.Core.Exceptions;
+﻿using HellEngine.Core.Constants;
+using HellEngine.Core.Exceptions;
 using HellEngine.Core.Models.Assets;
 using HellEngine.Core.Services.Assets;
 using HellEngine.Core.Services.Encoding;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.VisualStudio.TestPlatform.Common.Utilities;
 using Moq;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -21,16 +20,18 @@ namespace HellEngine.Core.Tests.Services.Assets
         class TestCaseContext
         {
             #region Data
-            public AssetsManagerOptions Options { get; }
-            public Dictionary<string, AssetDescriptor> Descriptors { get; }
+            public AssetsOptions Options { get; }
+            public AssetDescriptor Descriptor { get; }
+            public string Locale { get; }
             public byte [] AssetBytes { get; }
             public string AssetDataStringEncoded { get; }
             public string AssetDataBase64Encoded { get; }
             #endregion
 
             #region Services
-            public IOptions<AssetsManagerOptions> OptionsService { get; }
+            public IOptions<AssetsOptions> OptionsService { get; }
             public ILogger<AssetsManager> Logger { get; }
+            public IAssetDescriptorsCache AssetDescriptorsCache { get; }
             public IStringEncoder StringEncoder { get; }
             public IBase64Encoder Base64Encoder { get; }
             public IAssetManagerDataService DataService { get; }
@@ -41,27 +42,21 @@ namespace HellEngine.Core.Tests.Services.Assets
 
             public TestCaseContext()
             {
-                Options = AssetsManagerOptions.Default;
-                Descriptors = new Dictionary<string, AssetDescriptor>();
-                for (int i = 0; i < 5; ++i)
+                Options = AssetsOptions.Default;
+                Descriptor = new AssetDescriptor
                 {
-                    var key = $"d{i}";
-                    var path = $"p{i}";
-                    Descriptors.Add(
-                        key,
-                        new AssetDescriptor
-                        {
-                            Key = key,
-                            AssetType = AssetType.Text,
-                            AssetPath = path
-                        });
-                }
+                    Key = "d",
+                    AssetPath = "root/d",
+                    AssetType = AssetType.Text
+                };
+                Locale = Defaults.Locale;
                 AssetBytes = new byte[] { 0x01, 0x02, 0x03 };
                 AssetDataStringEncoded = "AssetDataStringEncoded";
                 AssetDataBase64Encoded = "AssetDataBase64Encoded";
 
-                OptionsService = Mock.Of<IOptions<AssetsManagerOptions>>();
+                OptionsService = Mock.Of<IOptions<AssetsOptions>>();
                 Logger = Mock.Of<ILogger<AssetsManager>>();
+                AssetDescriptorsCache = Mock.Of<IAssetDescriptorsCache>();
                 StringEncoder = Mock.Of<IStringEncoder>();
                 Base64Encoder = Mock.Of<IBase64Encoder>();
                 DataService = Mock.Of<IAssetManagerDataService>();
@@ -70,9 +65,9 @@ namespace HellEngine.Core.Tests.Services.Assets
                     m => m.Value)
                     .Returns(Options);
 
-                Mock.Get(DataService).Setup(
-                    m => m.LoadDescriptorsAsync(Options.AssetsDir, It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(Descriptors);
+                Mock.Get(AssetDescriptorsCache).Setup(
+                    m => m.GetAssetDescriptor(It.IsAny<string>()))
+                    .Returns(Descriptor);
 
                 Mock.Get(DataService).Setup(
                     m => m.ReadAssetBytesAsync(
@@ -93,93 +88,6 @@ namespace HellEngine.Core.Tests.Services.Assets
         #endregion
 
         [Fact]
-        public async Task Init()
-        {
-            // Arrange
-            var context = new TestCaseContext();
-            var sut = new AssetsManager(
-                context.OptionsService,
-                context.Logger,
-                context.StringEncoder,
-                context.Base64Encoder,
-                context.DataService);
-
-            // Act
-            await sut.Init();
-
-            // Assert
-            Mock.Get(context.DataService).Verify(
-                m => m.LoadDescriptorsAsync(
-                    context.Options.AssetsDir, default),
-                Times.Once);
-        }
-
-        [Fact]
-        public void SetGetLocale()
-        {
-            // Arrange
-            var context = new TestCaseContext();
-            var sut = new AssetsManager(
-                context.OptionsService,
-                context.Logger,
-                context.StringEncoder,
-                context.Base64Encoder,
-                context.DataService);
-
-            var locale = "en-us";
-
-            // Act
-            var startingLocale = sut.GetLocale();
-            sut.SetLocale(locale);
-            var actualLocale = sut.GetLocale();
-
-            // Assert
-            Assert.Equal(context.Options.StartingLocale, startingLocale);
-            Assert.Equal(locale, actualLocale);
-        }
-
-        [Fact]
-        public async Task GetAssetDescriptor_NotFoundThrows()
-        {
-            // Arrange
-            var context = new TestCaseContext();
-            var sut = new AssetsManager(
-                context.OptionsService,
-                context.Logger,
-                context.StringEncoder,
-                context.Base64Encoder,
-                context.DataService);
-
-            var key = $"d{context.Descriptors.Count}";
-
-            // Act + Assert
-            await sut.Init();
-            Assert.Throws<AssetDescriptorNotFoundException>(() => sut.GetAssetDescriptor(key));
-        }
-
-        [Fact]
-        public async Task GetAssetDescriptor_Found()
-        {
-            // Arrange
-            var context = new TestCaseContext();
-            var sut = new AssetsManager(
-                context.OptionsService,
-                context.Logger,
-                context.StringEncoder,
-                context.Base64Encoder,
-                context.DataService);
-
-            var descriptor = context.Descriptors["d2"];
-
-            // Act
-            await sut.Init();
-            var result = sut.GetAssetDescriptor(descriptor.Key);
-
-            // Assert
-            Assert.Same(descriptor, result);
-        }
-
-        [Fact]
         public async Task GetAsset_NotExpectedAssetType_Throws()
         {
             // Arrange
@@ -187,15 +95,14 @@ namespace HellEngine.Core.Tests.Services.Assets
             var sut = new AssetsManager(
                 context.OptionsService,
                 context.Logger,
+                context.AssetDescriptorsCache,
                 context.StringEncoder,
                 context.Base64Encoder,
                 context.DataService);
 
-            var descriptor = context.Descriptors["d2"];
-
             // Act + Assert
-            await sut.Init();
-            await Assert.ThrowsAsync<InvalidAssetTypeException>(() => sut.GetImageAsset(descriptor));
+            await Assert.ThrowsAsync<InvalidAssetTypeException>(
+                () => sut.GetImageAsset(context.Descriptor, context.Locale));
         }
 
         public static IEnumerable<object[]> GetAsset_DataEncoding_Default_Mapped_Data()
@@ -217,6 +124,7 @@ namespace HellEngine.Core.Tests.Services.Assets
             var sut = new AssetsManager(
                 context.OptionsService,
                 context.Logger,
+                context.AssetDescriptorsCache,
                 context.StringEncoder,
                 context.Base64Encoder,
                 context.DataService);
@@ -229,55 +137,19 @@ namespace HellEngine.Core.Tests.Services.Assets
                 AssetPath = key
             };
 
-            context.Descriptors.Clear();
-            context.Descriptors.Add(key, descriptor);
-
             // Act
-            await sut.Init();
             var asset = assetType switch
             {
-                AssetType.Text => await sut.GetTextAsset(descriptor),
-                AssetType.Image => await sut.GetImageAsset(descriptor),
-                AssetType.State => await sut.GetStateAsset(descriptor),
-                AssetType.Script => await sut.GetScriptAsset(descriptor),
+                AssetType.Text => await sut.GetTextAsset(descriptor, context.Locale),
+                AssetType.Image => await sut.GetImageAsset(descriptor, context.Locale),
+                AssetType.State => await sut.GetStateAsset(descriptor, context.Locale),
+                AssetType.Script => await sut.GetScriptAsset(descriptor, context.Locale),
                 _ => throw new NotImplementedException()
             };
 
             // Assert
             Assert.NotNull(asset);
             Assert.Equal(expected, asset.DataEncoding);
-        }
-
-        [Fact]
-        public async Task GetAsset_DataEncoding_Force_Applied()
-        {
-            // Arrange
-            var context = new TestCaseContext();
-            var sut = new AssetsManager(
-                context.OptionsService,
-                context.Logger,
-                context.StringEncoder,
-                context.Base64Encoder,
-                context.DataService);
-
-            var key = "d";
-            var descriptor = new AssetDescriptor
-            {
-                Key = key,
-                AssetType = AssetType.Text,
-                AssetPath = key
-            };
-
-            context.Descriptors.Clear();
-            context.Descriptors.Add(key, descriptor);
-
-            // Act
-            await sut.Init();
-            var asset = await sut.GetTextAsset(descriptor, AssetDataEncoding.String);
-
-            // Assert
-            Assert.NotNull(asset);
-            Assert.Equal(AssetDataEncoding.String, asset.DataEncoding);
         }
 
         [Theory]
@@ -292,6 +164,7 @@ namespace HellEngine.Core.Tests.Services.Assets
             var sut = new AssetsManager(
                 context.OptionsService,
                 context.Logger,
+                context.AssetDescriptorsCache,
                 context.StringEncoder,
                 context.Base64Encoder,
                 context.DataService);
@@ -304,8 +177,6 @@ namespace HellEngine.Core.Tests.Services.Assets
                 AssetPath = key
             };
 
-            context.Descriptors.Clear();
-            context.Descriptors.Add(key, descriptor);
             var dataEncoding = assetType switch
             {
                 AssetType.Text => AssetDataEncoding.Base64,
@@ -324,21 +195,20 @@ namespace HellEngine.Core.Tests.Services.Assets
             };
 
             // Act
-            await sut.Init();
             var asset1 = assetType switch
             {
-                AssetType.Text => await sut.GetTextAsset(descriptor),
-                AssetType.Image => await sut.GetImageAsset(descriptor),
-                AssetType.State => await sut.GetStateAsset(descriptor),
-                AssetType.Script => await sut.GetScriptAsset(descriptor),
+                AssetType.Text => await sut.GetTextAsset(descriptor, context.Locale),
+                AssetType.Image => await sut.GetImageAsset(descriptor, context.Locale),
+                AssetType.State => await sut.GetStateAsset(descriptor, context.Locale),
+                AssetType.Script => await sut.GetScriptAsset(descriptor, context.Locale),
                 _ => throw new NotImplementedException()
             };
             var asset2 = assetType switch
             {
-                AssetType.Text => await sut.GetTextAsset(descriptor),
-                AssetType.Image => await sut.GetImageAsset(descriptor),
-                AssetType.State => await sut.GetStateAsset(descriptor),
-                AssetType.Script => await sut.GetScriptAsset(descriptor),
+                AssetType.Text => await sut.GetTextAsset(descriptor, context.Locale),
+                AssetType.Image => await sut.GetImageAsset(descriptor, context.Locale),
+                AssetType.State => await sut.GetStateAsset(descriptor, context.Locale),
+                AssetType.Script => await sut.GetScriptAsset(descriptor, context.Locale),
                 _ => throw new NotImplementedException()
             };
 
@@ -347,10 +217,8 @@ namespace HellEngine.Core.Tests.Services.Assets
             Assert.NotNull(asset2);
             Assert.Same(descriptor, asset1.Descriptor);
             Assert.Same(descriptor, asset2.Descriptor);
-            Assert.Equal(context.Options.StartingLocale, asset1.Locale);
-            Assert.Equal(context.Options.StartingLocale, asset2.Locale);
-            Assert.True(asset1.IsDefaultLocale);
-            Assert.True(asset2.IsDefaultLocale);
+            Assert.Equal(context.Locale, asset1.Locale);
+            Assert.Equal(context.Locale, asset2.Locale);
             Assert.Equal(dataEncoding, asset1.DataEncoding);
             Assert.Equal(dataEncoding, asset2.DataEncoding);
             Assert.Equal(data, asset1.Data);
