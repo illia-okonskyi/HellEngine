@@ -37,8 +37,8 @@ namespace HellEngine.Core.Tests.Services.Assets
             public TestCaseContext()
             {
                 Options = AssetsOptions.Default;
-                Var1 = new IntVar("var1", "var1-name", 0, 15);
-                Var2 = new StringVar("var2", "var2-name", 0, "hello");
+                Var1 = new IntVar("var1", "var1-name", 15);
+                Var2 = new StringVar("var2", "var2-name", "hello");
                 NotFoundVarKey = "var3";
                 Data = new byte[] { 0x01, 0x02, 0x03 };
                 StringData = "1 {var=var1} 22 {var=var3} 333 {var=var2} 4444";

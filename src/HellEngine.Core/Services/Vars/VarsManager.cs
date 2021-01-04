@@ -3,7 +3,6 @@ using HellEngine.Core.Models.Vars;
 using HellEngine.Utils.Configuration.ServiceRegistrator;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace HellEngine.Core.Services.Vars
 {
@@ -12,6 +11,7 @@ namespace HellEngine.Core.Services.Vars
         void AddVar(IVar avar);
         void RemoveVar(string key);
         void ClearVars();
+        bool ContainsVar(string key);
         IVar GetVar(string key);
         TVar GetVar<TVar>(string key) where TVar : IVar;
 
@@ -26,7 +26,8 @@ namespace HellEngine.Core.Services.Vars
     {
         private readonly ILogger<VarsManager> logger;
 
-        private readonly Dictionary<string, IVar> vars = new Dictionary<string, IVar>();
+        private readonly List<IVar> vars = new List<IVar>();
+        private readonly Dictionary<string, int> index = new Dictionary<string, int>();
 
         public VarsManager(ILogger<VarsManager> logger)
         {
@@ -35,37 +36,45 @@ namespace HellEngine.Core.Services.Vars
 
         public void AddVar(IVar avar)
         {
-            if (vars.ContainsKey(avar.Key))
+            if (ContainsVar(avar.Key))
             {
                 throw new VarAlreadyExistsException(avar.Key);
             }
 
-            vars[avar.Key] = avar;
+            vars.Add(avar);
+            RebuildIndex();
         }
 
         public void RemoveVar(string key)
         {
-            if (!vars.ContainsKey(key))
+            if (!ContainsVar(key))
             {
                 throw new VarNotFoundException(key);
             }
 
-            vars.Remove(key);
+            vars.Remove(vars.Find(v => v.Key == key));
+            RebuildIndex();
         }
 
         public void ClearVars()
         {
             vars.Clear();
+            RebuildIndex();
+        }
+
+        public bool ContainsVar(string key)
+        {
+            return index.ContainsKey(key);
         }
 
         public IVar GetVar(string key)
         {
-            if (!vars.ContainsKey(key))
+            if (!ContainsVar(key))
             {
                 throw new VarNotFoundException(key);
             }
 
-            return vars[key];
+            return vars[index[key]];
         }
 
         public TVar GetVar<TVar>(string key) where TVar : IVar
@@ -75,7 +84,16 @@ namespace HellEngine.Core.Services.Vars
 
         public IEnumerable<IVar> GetAllVars()
         {
-            return vars.Values.OrderBy(v => v.SetIndex);
+            return vars;
+        }
+
+        private void RebuildIndex()
+        {
+            index.Clear();
+            for (int i = 0; i < vars.Count; ++i)
+            {
+                index[vars[i].Key] = i;
+            }
         }
     }
 }

@@ -1,18 +1,10 @@
-﻿using HellEngine.Core.Constants;
-using HellEngine.Core.Exceptions;
-using HellEngine.Core.Models.Assets;
+﻿using HellEngine.Core.Exceptions;
 using HellEngine.Core.Models.Vars;
-using HellEngine.Core.Services.Assets;
-using HellEngine.Core.Services.Encoding;
 using HellEngine.Core.Services.Vars;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace HellEngine.Core.Tests.Services.Vars
@@ -48,7 +40,7 @@ namespace HellEngine.Core.Tests.Services.Vars
                 context.Logger);
 
             var key = "var";
-            var aVar = new IntVar(key, "var-name", 0, 15);
+            var aVar = new IntVar(key, "var-name", 15);
 
             // Act
             sut.AddVar(aVar);
@@ -67,7 +59,7 @@ namespace HellEngine.Core.Tests.Services.Vars
                 context.Logger);
 
             var key = "var";
-            var aVar = new IntVar(key, "var-name", 0, 15);
+            var aVar = new IntVar(key, "var-name", 15);
 
             // Act + Assert
             sut.AddVar(aVar);
@@ -95,7 +87,7 @@ namespace HellEngine.Core.Tests.Services.Vars
                 context.Logger);
 
             var key = "var";
-            var aVar = new IntVar(key, "var-name", 0, 15);
+            var aVar = new IntVar(key, "var-name", 15);
 
             // Act + Assert
             sut.AddVar(aVar);
@@ -123,10 +115,27 @@ namespace HellEngine.Core.Tests.Services.Vars
             sut.ClearVars();
 
             // Assert
-            for (int i = 0; i < varsCount; ++i)
-            {
-                Assert.Throws<VarNotFoundException>(() => sut.GetVar($"key{i}"));
-            }
+            Assert.Empty(sut.GetAllVars());
+        }
+
+        [Fact]
+        public void ContainsVar()
+        {
+            // Arrange
+            var context = new TestCaseContext();
+            var sut = new VarsManager(
+                context.Logger);
+
+            var key = "key";
+
+            // Act
+            var beforeAdd = sut.ContainsVar(key);
+            sut.AddVar(new IntVar(key, "var-name"));
+            var afterAdd = sut.ContainsVar(key);
+
+            // Assert
+            Assert.False(beforeAdd);
+            Assert.True(afterAdd);
         }
 
         [Fact]
@@ -138,7 +147,7 @@ namespace HellEngine.Core.Tests.Services.Vars
                 context.Logger);
 
             var key = "key";
-            var aVar = new IntVar("key", "var-name", 3, 15);
+            var aVar = new IntVar("key", "var-name", 15);
 
             // Act
             sut.AddVar(aVar);
@@ -167,15 +176,11 @@ namespace HellEngine.Core.Tests.Services.Vars
                 vars.Add(new IntVar(
                     $"key{i}",
                     $"var-name{i}",
-                    (uint)i,
                     random.Next(-100, 100)));
             }
-            vars = vars
-                .OrderBy(v => v.SetIndex)
-                .ToList();
 
             // Act
-            foreach (var v in vars.OrderByDescending(v => v.SetIndex))
+            foreach (var v in vars)
             {
                 sut.AddVar(v);
             }
