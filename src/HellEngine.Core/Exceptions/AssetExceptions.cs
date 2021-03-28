@@ -3,7 +3,7 @@ using System;
 
 namespace HellEngine.Core.Exceptions
 {
-    public class AssetException : Exception
+    public class AssetException : HellEngineException
     {
         public AssetException()
             : base()

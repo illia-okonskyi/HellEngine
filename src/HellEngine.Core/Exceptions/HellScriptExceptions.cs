@@ -2,7 +2,7 @@
 
 namespace HellEngine.Core.Exceptions
 {
-    public class HellScriptException : Exception
+    public class HellScriptException : HellEngineException
     {
         public HellScriptException()
             : base()

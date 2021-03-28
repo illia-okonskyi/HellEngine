@@ -1,6 +1,7 @@
 ﻿using HellEngine.Core.Models;
 using HellEngine.Core.Services.Assets;
 using HellEngine.Core.Services.Locale;
+using HellEngine.Core.Services.StateMachine;
 using HellEngine.Core.Services.Vars;
 using HellEngine.Utils.Configuration.ServiceRegistrator;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,7 +58,8 @@ namespace HellEngine.Core.Services.Sessions
                 Id = sessionId,
                 LocaleManager = services.GetRequiredService<ILocaleManager>(),
                 VarsManager = services.GetRequiredService<IVarsManager>(),
-                AssetsManager = services.GetRequiredService<IAssetsManager>()
+                AssetsManager = services.GetRequiredService<IAssetsManager>(),
+                StateMachineManager = services.GetRequiredService<IStateMachineManager>()
             };
         }
 

@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace HellEngine.Core.Exceptions
 {
-    public class VarsException : Exception
+    public class VarsException : HellEngineException
     {
         public VarsException()
             : base()

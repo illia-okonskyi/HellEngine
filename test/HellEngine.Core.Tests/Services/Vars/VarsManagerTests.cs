@@ -2,9 +2,11 @@
 using HellEngine.Core.Models.Vars;
 using HellEngine.Core.Services.Vars;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace HellEngine.Core.Tests.Services.Vars
@@ -15,9 +17,11 @@ namespace HellEngine.Core.Tests.Services.Vars
         class TestCaseContext
         {
             #region Data
+            public VarsManagerOptions Options { get; }
             #endregion
 
             #region Services
+            public IOptions<VarsManagerOptions> OptionsService { get; }
             public ILogger<VarsManager> Logger { get; }
             #endregion
 
@@ -26,10 +30,44 @@ namespace HellEngine.Core.Tests.Services.Vars
 
             public TestCaseContext()
             {
+                Options = VarsManagerOptions.Default;
+
+                OptionsService = Mock.Of<IOptions<VarsManagerOptions>>();
                 Logger = Mock.Of<ILogger<VarsManager>>();
+
+                Mock.Get(OptionsService).Setup(
+                    m => m.Value)
+                    .Returns(Options);
             }
         }
         #endregion
+
+        [Fact]
+        public void Init()
+        {
+            // Arrange
+            var context = new TestCaseContext();
+            var sut = new VarsManager(
+                context.OptionsService,
+                context.Logger);
+
+            var userName = "userName";
+            var vars = new List<IVar>
+            {
+                new IntVar("v1", "v1-name", 0),
+                new IntVar("v2", "v2-name", 1),
+                new IntVar("v3", "v3-name", 2),
+            };
+
+            // Act
+            sut.Init(userName, vars);
+            var allVars = sut.GetAllVars();
+            var userNameVar = sut.GetVar<StringVar>(context.Options.UserNameVarKey);
+
+            // Assert
+            Assert.Equal(vars.Count + 1, allVars.Count());
+            Assert.Equal(userName, userNameVar.Value);
+        }
 
         [Fact]
         public void AddVar_Success()
@@ -37,6 +75,7 @@ namespace HellEngine.Core.Tests.Services.Vars
             // Arrange
             var context = new TestCaseContext();
             var sut = new VarsManager(
+                context.OptionsService,
                 context.Logger);
 
             var key = "var";
@@ -56,6 +95,7 @@ namespace HellEngine.Core.Tests.Services.Vars
             // Arrange
             var context = new TestCaseContext();
             var sut = new VarsManager(
+                context.OptionsService,
                 context.Logger);
 
             var key = "var";
@@ -72,6 +112,7 @@ namespace HellEngine.Core.Tests.Services.Vars
             // Arrange
             var context = new TestCaseContext();
             var sut = new VarsManager(
+                context.OptionsService,
                 context.Logger);
 
             // Act + Assert
@@ -84,6 +125,7 @@ namespace HellEngine.Core.Tests.Services.Vars
             // Arrange
             var context = new TestCaseContext();
             var sut = new VarsManager(
+                context.OptionsService,
                 context.Logger);
 
             var key = "var";
@@ -101,6 +143,7 @@ namespace HellEngine.Core.Tests.Services.Vars
             // Arrange
             var context = new TestCaseContext();
             var sut = new VarsManager(
+                context.OptionsService,
                 context.Logger);
 
             int varsCount = 3;
@@ -124,6 +167,7 @@ namespace HellEngine.Core.Tests.Services.Vars
             // Arrange
             var context = new TestCaseContext();
             var sut = new VarsManager(
+                context.OptionsService,
                 context.Logger);
 
             var key = "key";
@@ -144,6 +188,7 @@ namespace HellEngine.Core.Tests.Services.Vars
             // Arrange
             var context = new TestCaseContext();
             var sut = new VarsManager(
+                context.OptionsService,
                 context.Logger);
 
             var key = "key";
@@ -165,6 +210,7 @@ namespace HellEngine.Core.Tests.Services.Vars
             // Arrange
             var context = new TestCaseContext();
             var sut = new VarsManager(
+                context.OptionsService,
                 context.Logger);
 
             var random = new Random();

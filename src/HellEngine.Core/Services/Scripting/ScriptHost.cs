@@ -169,6 +169,9 @@ namespace HellEngine.Core.Services.Scripting
             return ScriptOptions.Default
                 .WithFileEncoding(stringEncoder.GetEncoding())
                 .AddImports("Microsoft.Extensions.Logging")
+                .AddImports("System")
+                .AddImports("HellEngine.Core.Models.StateMachine")
+                .AddImports("HellEngine.Core.Models.Vars")
                 .AddReferences(
                     typeof(AssemblyEntryPoint).Assembly,
                     typeof(ILogger).Assembly);

@@ -1,5 +1,6 @@
 ﻿using HellEngine.Core.Services.Assets;
 using HellEngine.Core.Services.Locale;
+using HellEngine.Core.Services.StateMachine;
 using HellEngine.Core.Services.Vars;
 using System;
 
@@ -12,5 +13,6 @@ namespace HellEngine.Core.Models
         public ILocaleManager LocaleManager { get; set; }
         public IVarsManager VarsManager { get; set; }
         public IAssetsManager AssetsManager { get; set; }
+        public IStateMachineManager StateMachineManager { get; set; }
     }
 }

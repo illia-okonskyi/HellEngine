@@ -49,12 +49,12 @@ namespace HellEngine.Core.Models.Vars
                 var correctedValue = value.Value;
                 if (MinValue.HasValue)
                 {
-                    correctedValue = Math.Min(MinValue.Value, correctedValue);
+                    correctedValue = Math.Max(MinValue.Value, correctedValue);
                 }
 
                 if (MaxValue.HasValue)
                 {
-                    correctedValue = Math.Max(MaxValue.Value, correctedValue);
+                    correctedValue = Math.Min(MaxValue.Value, correctedValue);
                 }
 
                 varValue = correctedValue;
@@ -69,7 +69,7 @@ namespace HellEngine.Core.Models.Vars
             int? maxValue = default)
             : base(key, nameAssetKey)
         {
-            if (minValue.HasValue && maxValue.HasValue && minValue.Value > maxValue)
+            if (minValue.HasValue && maxValue.HasValue && minValue.Value > maxValue.Value)
             {
                 throw new ArgumentException("minValue > maxValue");
             }
@@ -104,12 +104,12 @@ namespace HellEngine.Core.Models.Vars
                 var correctedValue = value.Value;
                 if (MinValue.HasValue)
                 {
-                    correctedValue = Math.Min(MinValue.Value, correctedValue);
+                    correctedValue = Math.Max(MinValue.Value, correctedValue);
                 }
 
                 if (MaxValue.HasValue)
                 {
-                    correctedValue = Math.Max(MaxValue.Value, correctedValue);
+                    correctedValue = Math.Min(MaxValue.Value, correctedValue);
                 }
 
                 varValue = correctedValue;

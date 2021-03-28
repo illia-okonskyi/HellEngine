@@ -13,5 +13,11 @@
         public static string AssetsDescriptorsDir = "descriptors";
 
         public static string VarValueSpanClass = "var-value";
+
+        public static string StateMachineInititalStateKey = "common.state.initial";
+        public static string StateMachineFinalStateKey = "common.state.final";
+        
+        public static string VarsManagerUserNameVarKey = "common.userName";
+        public static string VarsManagerUserNameVarNameAssetKey = "common.vars.userName";
     }
 }
